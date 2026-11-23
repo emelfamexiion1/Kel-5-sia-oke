@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SIA-P Ketoprak Rizki | Prototype Sistem Informasi Akuntansi</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- SIDEBAR NAVIGASI -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">KR</div>
+        <div>
+          <h1>Ketoprak Rizki</h1>
+          <span>SIA-P UMKM (SAK EMKM)</span>
+        </div>
+      </div>
+
+      <!-- PENGENDALIAN INTERNAL: HAK AKSES (SOD) -->
+      <div class="role-box">
+        <label for="roleSelect">Hak Akses Pengguna (SOD)</label>
+        <select id="roleSelect" onchange="changeRole()">
+          <option value="owner">Pemilik (Akses Penuh)</option>
+          <option value="kasir">Kasir (Hanya POS Penjualan)</option>
+        </select>
+        <small id="roleHint">Mode Pemilik: Seluruh modul terbuka.</small>
+      </div>
+
+      <nav class="nav-menu">
+        <div class="nav-group">TRANSAKSI</div>
+        <button class="nav-btn active" data-tab="pos" onclick="switchTab('pos')">
+          🧾 Form Penjualan (POS)
+        </button>
+        <button class="nav-btn owner-only" data-tab="expense" onclick="switchTab('expense')">
+          💸 Pembelian & Kas Keluar
+        </button>
+        <button class="nav-btn owner-only" data-tab="payroll" onclick="switchTab('payroll')">
+          👥 Slip Gaji & PPh 21
+        </button>
+
+        <div class="nav-group owner-only">LAPORAN & PAJAK</div>
+        <button class="nav-btn owner-only" data-tab="income" onclick="switchTab('income')">
+          📊 Laporan Laba Rugi
+        </button>
+        <button class="nav-btn owner-only" data-tab="balance" onclick="switchTab('balance')">
+          ⚖️ Neraca (Posisi Keuangan)
+        </button>
+        <button class="nav-btn owner-only" data-tab="tax" onclick="switchTab('tax')">
+          🏛️ Rekap Pajak PP 55/2022
+        </button>
+
+        <div class="nav-group owner-only">MASTER DATA</div>
+        <button class="nav-btn owner-only" data-tab="master" onclick="switchTab('master')">
+          📦 Master Produk & COA
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="btn-reset" onclick="resetDemoData()">Reset Data Awal (Okt 2026)</button>
+      </div>
+    </aside>
+
+    <!-- KONTEN UTAMA -->
+    <main class="main-content">
+      <!-- TOP RINGKASAN KEUANGAN -->
+      <header class="topbar">
+        <div>
+          <h2 id="pageTitle">Form Input Penjualan (POS)</h2>
+          <p class="subtitle">Jl. Hayam Wuruk, Pleburan, Semarang Selatan • Periode Berjalan: Oktober 2026</p>
+        </div>
+        <div class="kpi-strip">
+          <div class="kpi-card">
+            <span>Kas & Bank</span>
+            <strong id="kpiKas">Rp 1.850.000</strong>
+          </div>
+          <div class="kpi-card">
+            <span>Omzet Bulan Ini</span>
+            <strong id="kpiOmzet">Rp 5.200.000</strong>
+          </div>
+          <div class="kpi-card">
+            <span>Laba Bersih</span>
+            <strong id="kpiLaba">Rp 200.000</strong>
+          </div>
+        </div>
+      </header>
+
+      <!-- 1. MODUL POS PENJUALAN -->
+      <section id="tab-pos" class="tab-section active">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header">
+              <h3>Input Pesanan Baru</h3>
+              <span class="badge" id="posInvoiceNo">FK-202610-0090</span>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Kasir Bertugas</label>
+                <input type="text" id="posCashier" value="Karyawan 1 (Kasir)" readonly class="readonly-input" />
+              </div>
+              <div class="form-group">
+                <label>Metode Pembayaran</label>
+                <select id="posPayment">
+                  <option value="Tunai">Tunai (Kas)</option>
+                  <option value="QRIS">QRIS (Bank)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group" style="flex: 2;">
+                <label>Pilih Menu / Produk</label>
+                <select id="posProductSelect"></select>
+              </div>
+              <div class="form-group">
+                <label>Qty</label>
+                <input type="number" id="posQty" value="1" min="1" />
+              </div>
+              <div class="form-group" style="align-self: flex-end;">
+                <button type="button" class="btn btn-primary" onclick="addToCart()">+ Tambah</button>
+              </div>
+            </div>
+
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Kode</th>
+                  <th>Nama Item</th>
+                  <th>Harga</th>
+                  <th>Qty</th>
+                  <th>Diskon</th>
+                  <th>Total (Auto)</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="cartBody">
+                <tr><td colspan="7" class="empty-msg">Belum ada item ditambahkan.</td></tr>
+              </tbody>
+            </table>
+
+            <div class="pos-summary">
+              <div class="summary-line">
+                <span>DPP (Dasar Pengenaan Pajak)</span>
+                <span id="posDpp">Rp 0</span>
+              </div>
+              <div class="summary-line">
+                <span>PPN (0% Non-PKP)</span>
+                <span>Rp 0</span>
+              </div>
+              <div class="summary-line total">
+                <span>TOTAL BAYAR (Read-Only)</span>
+                <span id="posTotal">Rp 0</span>
+              </div>
+              <small class="control-note">🔒 Pengendalian Internal: Nominal total & diskon dikunci sistem untuk mencegah skimming.</small>
+            </div>
+
+            <button type="button" class="btn btn-success btn-block" onclick="submitSale()">
+              Simpan Transaksi & Cetak Struk (2 Rangkap)
+            </button>
+          </div>
+
+          <!-- RIWAYAT & STRUK PENJUALAN -->
+          <div class="card">
+            <div class="card-header">
+              <h3>Riwayat Penjualan Hari Ini</h3>
+            </div>
+            <div id="salesHistoryList" class="history-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. MODUL PEMBELIAN & KAS KELUAR -->
+      <section id="tab-expense" class="tab-section">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header">
+              <h3>Form Pembelian & Kas Keluar</h3>
+              <span class="badge" id="expVoucherNo">KK-202610-0035</span>
+            </div>
+            <form id="expenseForm" onsubmit="submitExpense(event)">
+              <div class="form-group">
+                <label>Nama Vendor / Supplier</label>
+                <input type="text" id="expVendor" placeholder="Contoh: Toko Bumbu Barokah" required />
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Kode Akun Beban (COA)</label>
+                  <select id="expAccount" required>
+                    <option value="hpp">5-1100 - Beban Bahan Baku & Penolong (HPP)</option>
+                    <option value="sewa">5-2200 - Beban Sewa & Utilitas (Listrik/Air)</option>
+                    <option value="ops">5-2300 - Beban Perlengkapan & Operasional Lain</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>NPWP Vendor (Opsional)</label>
+                  <input type="text" id="expNpwp" placeholder="93.452.108.4-504.000" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Keterangan Pembelian</label>
+                <input type="text" id="expDesc" placeholder="Contoh: Kacang Tanah 5kg, Tahu 50 potong" required />
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Total Pengeluaran Kas (Rp)</label>
+                  <input type="number" id="expAmount" min="1000" placeholder="350000" required />
+                </div>
+                <div class="form-group">
+                  <label>Upload Foto Nota Fisik (Wajib)*</label>
+                  <input type="file" id="expReceipt" accept="image/*,.pdf" required />
+                </div>
+              </div>
+              <small class="control-note">🔒 Pengendalian Internal: Sistem menolak penyimpanan jika lampiran foto nota kosong.</small>
+              <button type="submit" class="btn btn-primary btn-block" style="margin-top: 14px;">
+                Simpan Pengeluaran & Jurnal Otomatis
+              </button>
+            </form>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3>Log Bukti Kas Keluar</h3>
+            </div>
+            <div id="expenseHistoryList" class="history-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. MODUL PENGGAJIAN & PPh 21 -->
+      <section id="tab-payroll" class="tab-section">
+        <div class="card max-w-800">
+          <div class="card-header">
+            <h3>Form Slip Gaji Karyawan & Perhitungan PPh 21</h3>
+            <span class="badge">PTKP TK/0: Rp 4.500.000/bln</span>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Pilih Karyawan</label>
+              <select id="payEmployee">
+                <option value="Karyawan 1 - Staf Produksi">Karyawan 1 (Staf Produksi / Dapur)</option>
+                <option value="Karyawan 2 - Kasir & Pelayanan">Karyawan 2 (Kasir & Pelayanan)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Status PTKP</label>
+              <input type="text" value="TK/0 (Tidak Kawin, 0 Tanggungan)" readonly class="readonly-input" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Gaji Pokok (Rp)</label>
+              <input type="number" id="payBase" value="1800000" oninput="calculatePayroll()" />
+            </div>
+            <div class="form-group">
+              <label>Tunjangan Uang Makan (Rp)</label>
+              <input type="number" id="payMeal" value="400000" oninput="calculatePayroll()" />
+            </div>
+            <div class="form-group">
+              <label>Potongan Kasbon (Rp)</label>
+              <input type="number" id="payDeduction" value="0" oninput="calculatePayroll()" />
+            </div>
+          </div>
+
+          <div class="slip-preview">
+            <div class="slip-row">
+              <span>Total Penerimaan Bruto</span>
+              <strong id="payGross">Rp 2.200.000</strong>
+            </div>
+            <div class="slip-row">
+              <span>Potongan PPh Pasal 21 (TER A 0% — Di bawah PTKP)</span>
+              <strong id="payTax">Rp 0</strong>
+            </div>
+            <div class="slip-row">
+              <span>Potongan Kasbon / Lainnya</span>
+              <strong id="payDedDisplay">Rp 0</strong>
+            </div>
+            <div class="slip-row net">
+              <span>GAJI BERSIH DITERIMA (TAKE HOME PAY)</span>
+              <strong id="payNet">Rp 2.200.000</strong>
+            </div>
+          </div>
+          <button type="button" class="btn btn-primary btn-block" onclick="recordPayroll()">
+            Catat Beban Gaji ke Laporan Keuangan
+          </button>
+        </div>
+      </section>
+
+      <!-- 4. LAPORAN LABA RUGI (SAK EMKM) -->
+      <section id="tab-income" class="tab-section">
+        <div class="card max-w-800">
+          <div class="report-title">
+            <h3>KETOPRAK RIZKI</h3>
+            <h4>LAPORAN LABA RUGI (STANDAR SAK EMKM)</h4>
+            <p>Untuk Periode yang Berakhir 31 Oktober 2026</p>
+          </div>
+          <table class="report-table">
+            <tbody>
+              <tr class="section-head">
+                <td>PENJUALAN BERSIH</td>
+                <td class="num" id="lrSales">Rp 5.200.000</td>
+              </tr>
+              <tr>
+                <td>Beban Pokok Penjualan (Bahan Baku & Penolong)</td>
+                <td class="num neg" id="lrHpp">(Rp 2.300.000)</td>
+              </tr>
+              <tr class="subtotal">
+                <td>LABA KOTOR</td>
+                <td class="num" id="lrGrossProfit">Rp 2.900.000</td>
+              </tr>
+              <tr class="section-head">
+                <td colspan="2">Beban Operasional:</td>
+              </tr>
+              <tr>
+                <td class="indent">- Beban Gaji Karyawan</td>
+                <td class="num neg" id="lrSalary">(Rp 2.200.000)</td>
+              </tr>
+              <tr>
+                <td class="indent">- Beban Sewa & Utilitas (Listrik/Air)</td>
+                <td class="num neg" id="lrRent">(Rp 350.000)</td>
+              </tr>
+              <tr>
+                <td class="indent">- Beban Perlengkapan & Operasional Lain</td>
+                <td class="num neg" id="lrOps">(Rp 150.000)</td>
+              </tr>
+              <tr class="subtotal">
+                <td>LABA BERSIH SEBELUM PAJAK</td>
+                <td class="num" id="lrEbt">Rp 200.000</td>
+              </tr>
+              <tr>
+                <td>Pajak Penghasilan (PPh Final 0,5% PP 55/2022)*</td>
+                <td class="num" id="lrTax">(Rp 0)</td>
+              </tr>
+              <tr class="grand-total">
+                <td>LABA BERSIH SETELAH PAJAK</td>
+                <td class="num" id="lrNetIncome">Rp 200.000</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="footnote">*PPh Final PP 55/2022 bernilai Rp 0 selama omzet kumulatif tahun pajak belum melebihi Rp 500.000.000 (WP Orang Pribadi).</p>
+        </div>
+      </section>
+
+      <!-- 5. LAPORAN POSISI KEUANGAN (NERACA) -->
+      <section id="tab-balance" class="tab-section">
+        <div class="card max-w-800">
+          <div class="report-title">
+            <h3>KETOPRAK RIZKI</h3>
+            <h4>LAPORAN POSISI KEUANGAN (NERACA)</h4>
+            <p>Per 31 Oktober 2026</p>
+          </div>
+          <div class="grid-2">
+            <table class="report-table">
+              <thead>
+                <tr><th colspan="2">ASET</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Kas dan Bank</td>
+                  <td class="num" id="nrCash">Rp 1.850.000</td>
+                </tr>
+                <tr>
+                  <td>Persediaan Bahan Baku</td>
+                  <td class="num" id="nrInventory">Rp 450.000</td>
+                </tr>
+                <tr class="subtotal">
+                  <td>Total Aset Lancar</td>
+                  <td class="num" id="nrCurrentAssets">Rp 2.300.000</td>
+                </tr>
+                <tr>
+                  <td>Peralatan Usaha (Neto)</td>
+                  <td class="num" id="nrEquipment">Rp 3.500.000</td>
+                </tr>
+                <tr class="grand-total">
+                  <td>TOTAL ASET</td>
+                  <td class="num" id="nrTotalAssets">Rp 5.800.000</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <table class="report-table">
+              <thead>
+                <tr><th colspan="2">LIABILITAS DAN EKUITAS</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Utang Usaha</td>
+                  <td class="num">Rp 0</td>
+                </tr>
+                <tr class="subtotal">
+                  <td>Total Liabilitas</td>
+                  <td class="num">Rp 0</td>
+                </tr>
+                <tr>
+                  <td>Modal Pemilik</td>
+                  <td class="num">Rp 5.600.000</td>
+                </tr>
+                <tr>
+                  <td>Laba Ditahan / Berjalan</td>
+                  <td class="num" id="nrRetainedEarnings">Rp 200.000</td>
+                </tr>
+                <tr class="grand-total">
+                  <td>TOTAL LIABILITAS & EKUITAS</td>
+                  <td class="num" id="nrTotalLiabEq">Rp 5.800.000</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. REKAP PAJAK PP 55/2022 -->
+      <section id="tab-tax" class="tab-section">
+        <div class="card max-w-800">
+          <div class="card-header">
+            <div>
+              <h3>Dasbor Rekapitulasi Perpajakan (PP 55/2022)</h3>
+              <p class="subtitle">Monitoring Batas Omzet Tidak Kena Pajak Rp 500.000.000 / Tahun</p>
+            </div>
+            <span class="badge badge-success" id="taxStatusBadge">Fasilitas Bebas Pajak (0%)</span>
+          </div>
+
+          <div class="progress-wrapper">
+            <div class="progress-label">
+              <span>Progres Omzet Kumulatif 2026</span>
+              <strong id="taxProgressText">Rp 50.200.000 / Rp 500.000.000 (10,04%)</strong>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" id="taxProgressBar" style="width: 10.04%;"></div>
+            </div>
+          </div>
+
+          <table class="data-table" style="margin-top: 20px;">
+            <thead>
+              <tr>
+                <th>Masa Pajak</th>
+                <th>Omzet Bulanan</th>
+                <th>Omzet Kumulatif</th>
+                <th>Status Omzet (&lt; Rp500 Jt)</th>
+                <th>PPh Final Terutang (0,5%)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Jan - Sep 2026</td>
+                <td>Rp 45.000.000</td>
+                <td>Rp 45.000.000</td>
+                <td><span class="pill-green">Fasilitas Bebas Pajak</span></td>
+                <td>Rp 0</td>
+              </tr>
+              <tr>
+                <td>Oktober 2026</td>
+                <td id="taxOctOmzet">Rp 5.200.000</td>
+                <td id="taxCumOmzet">Rp 50.200.000</td>
+                <td id="taxOctStatus"><span class="pill-green">Fasilitas Bebas Pajak</span></td>
+                <td id="taxOctPayable">Rp 0</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="subtotal">
+                <td colspan="4">TOTAL PPh FINAL TERUTANG TAHUN 2026</td>
+                <td id="taxTotalYear">Rp 0</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </section>
+
+      <!-- 7. MASTER DATA PRODUK & COA -->
+      <section id="tab-master" class="tab-section">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header">
+              <h3>Master Produk Ketoprak Rizki</h3>
+            </div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Kode</th>
+                  <th>Nama Produk</th>
+                  <th>Harga Jual</th>
+                  <th>Kategori</th>
+                </tr>
+              </thead>
+              <tbody id="masterProductBody"></tbody>
+            </table>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3>Daftar Akun (Chart of Accounts - SAK EMKM)</h3>
+            </div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Kode Akun</th>
+                  <th>Nama Akun</th>
+                  <th>Pos Laporan</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>1-1100</td><td>Kas dan Bank</td><td>Aset Lancar</td></tr>
+                <tr><td>1-1200</td><td>Persediaan Bahan Baku</td><td>Aset Lancar</td></tr>
+                <tr><td>1-2100</td><td>Peralatan Usaha (Neto)</td><td>Aset Tetap</td></tr>
+                <tr><td>3-1000</td><td>Modal Pemilik</td><td>Ekuitas</td></tr>
+                <tr><td>4-1000</td><td>Penjualan Bersih</td><td>Pendapatan</td></tr>
+                <tr><td>5-1100</td><td>Beban Bahan Baku & Penolong</td><td>HPP</td></tr>
+                <tr><td>5-2100</td><td>Beban Gaji Karyawan</td><td>Beban Operasional</td></tr>
+                <tr><td>5-2200</td><td>Beban Sewa & Utilitas</td><td>Beban Operasional</td></tr>
+                <tr><td>5-2300</td><td>Beban Perlengkapan & Lainnya</td><td>Beban Operasional</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL STRUK 2 RANGKAP -->
+  <div id="receiptModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Struk Penjualan Berhasil Dicetak</h3>
+        <button onclick="closeModal()">&times;</button>
+      </div>
+      <div id="receiptPrintArea" class="receipt-grid"></div>
+      <div style="margin-top: 16px; text-align: right;">
+        <button class="btn btn-primary" onclick="closeModal()">Selesai & Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
